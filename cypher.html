@@ -3,109 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Encrypt & Decrypt</title>
+    <title>Cypher — Encrypt & Decrypt</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #181818;
-            color: #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
+        :root{
+            --bg:#0f1720;
+            --card:#0f1728;
+            --muted:#9aa4b2;
+            --accent:#4fd1c5;
+            --accent-2:#60a5fa;
+            --glass: rgba(255,255,255,0.04);
+            --danger: #ff6b6b;
         }
-        .container {
-            background-color: #2b2b2b;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
-            text-align: center;
-            width: 90%;
-            max-width: 400px;
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0}
+        body{
+            font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background: linear-gradient(180deg,var(--bg) 0%, #071127 100%);
+            color:#e6eef6;
+            display:flex;align-items:center;justify-content:center;padding:24px;
         }
-        textarea {
-            width: 100%;
-            height: 100px;
-            background-color: #3c3c3c;
-            color: #f0f0f0;
-            border: none;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 10px;
-            resize: none;
+        .app{
+            width:100%;max-width:1000px;background:linear-gradient(180deg,var(--card), rgba(12,18,30,0.9));
+            border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);display:grid;grid-template-columns:1fr 420px;gap:18px;align-items:start;
         }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: #3c3c3c;
-            color: #f0f0f0;
-            border: none;
-            border-radius: 5px;
+        header{grid-column:1 / -1;display:flex;align-items:center;gap:12px}
+        .brand{display:flex;flex-direction:column}
+        .brand h1{margin:0;font-size:18px;letter-spacing:0.2px}
+        .brand p{margin:0;color:var(--muted);font-size:13px}
+        .left{padding:6px}
+        .card{background:var(--glass);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:14px}
+
+        label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+        textarea,input[type="text"],input[type="password"],input[type="search"]{
+            width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;font-size:14px;resize:vertical;
         }
-        button {
-            background-color: #444;
-            color: #f9d74d;
-            border: none;
-            padding: 10px;
-            width: 100%;
-            margin-top: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #f9d74d;
-            color: #1a1a1a;
-        }
-        .output {
-            background-color: #3c3c3c;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            word-break: break-all;
+        textarea{min-height:160px}
+        .controls{display:flex;gap:8px;margin-top:10px}
+        .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:none;background:#0b1220;color:var(--accent);cursor:pointer}
+        .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#072035}
+        .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+        .btn.warn{background:var(--danger);color:#fff}
+        .right{display:flex;flex-direction:column;gap:12px}
+        .outputArea{min-height:200px;padding:12px;border-radius:8px;background:rgba(10,14,20,0.6);border:1px dashed rgba(255,255,255,0.03);overflow:auto;word-break:break-word}
+        .meta{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
+        .small{font-size:12px;color:var(--muted)}
+        .actions{display:flex;gap:8px;margin-top:10px}
+        .row{display:flex;gap:8px}
+        .opt{display:flex;gap:8px;align-items:center}
+        .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);margin:10px 0;border-radius:2px}
+        .status{font-size:13px;color:var(--muted);min-height:18px}
+
+        @media (max-width:880px){
+            .app{grid-template-columns:1fr;}
+            .right{order:2}
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Encrypt & Decrypt</h2>
-        <input type="password" id="password" placeholder="Enter password" />
-        <textarea id="inputText" placeholder="Enter text..."></textarea>
-        <button onclick="encryptText()">Encrypt</button>
-        <button onclick="decryptText()">Decrypt</button>
-        <div class="output" id="outputText"></div>
+    <div class="app" role="application">
+        <header>
+            <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#032; font-weight:700">C</div>
+            <div class="brand">
+                <h1>Cypher</h1>
+                <p>Quick AES encrypt/decrypt in your browser — data never leaves your machine</p>
+            </div>
+            <div style="margin-left:auto" class="small">AES • CryptoJS</div>
+        </header>
+
+        <section class="left">
+            <div class="card">
+                <label for="password">Password</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input id="password" type="password" placeholder="Enter a password (required)" />
+                    <button id="togglePwd" class="btn ghost" title="Show/Hide password">Show</button>
+                </div>
+                <div style="height:8px"></div>
+                <label for="inputText">Input (plaintext or ciphertext)</label>
+                <textarea id="inputText" placeholder="Paste text to encrypt or the ciphertext to decrypt..."></textarea>
+
+                <div class="controls">
+                    <button id="encryptBtn" class="btn primary">Encrypt</button>
+                    <button id="decryptBtn" class="btn">Decrypt</button>
+                    <button id="swapBtn" class="btn ghost">Swap ↔</button>
+                </div>
+
+                <div class="divider"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div class="small">Encoding: UTF-8 • Mode: AES</div>
+                    <div class="small">Output updates below</div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="right">
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div><strong>Result</strong></div>
+                    <div class="opt">
+                        <button id="copyBtn" class="btn ghost">Copy</button>
+                        <button id="downloadBtn" class="btn ghost">Download</button>
+                        <button id="clearBtn" class="btn ghost">Clear</button>
+                    </div>
+                </div>
+                <div class="outputArea" id="outputText" aria-live="polite">Nothing yet — encrypt or decrypt some text.</div>
+                <div class="meta">
+                    <div class="small status" id="status">Ready</div>
+                    <div class="small">Length: <span id="outLen">0</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div><strong>Tips</strong></div>
+                </div>
+                <ul style="margin:8px 0 0 18px;color:var(--muted);font-size:13px">
+                    <li>Use a strong password and keep it safe — lost passwords cannot be recovered.</li>
+                    <li>Encrypt small snippets or files (use download to save output).</li>
+                    <li>If decryption fails the password or ciphertext is likely incorrect.</li>
+                </ul>
+            </div>
+        </aside>
     </div>
-    
+
     <script>
-        function encryptText() {
-            let text = document.getElementById("inputText").value;
-            let password = document.getElementById("password").value;
-            if (!password) {
-                alert("Please enter a password!");
-                return;
-            }
-            let encrypted = CryptoJS.AES.encrypt(text, password).toString();
-            document.getElementById("outputText").textContent = encrypted;
+        // Helper DOM refs
+        const password = document.getElementById('password');
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+        const status = document.getElementById('status');
+        const outLen = document.getElementById('outLen');
+
+        const encryptBtn = document.getElementById('encryptBtn');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const togglePwd = document.getElementById('togglePwd');
+        const swapBtn = document.getElementById('swapBtn');
+
+        function setStatus(msg, warn=false){
+            status.textContent = msg;
+            status.style.color = warn ? 'var(--danger)' : 'var(--muted)';
         }
-        function decryptText() {
-            let text = document.getElementById("inputText").value;
-            let password = document.getElementById("password").value;
-            if (!password) {
-                alert("Please enter a password!");
-                return;
-            }
-            try {
-                let bytes = CryptoJS.AES.decrypt(text, password);
-                let decrypted = bytes.toString(CryptoJS.enc.Utf8);
-                document.getElementById("outputText").textContent = decrypted || "Invalid encrypted text or password!";
-            } catch (e) {
-                document.getElementById("outputText").textContent = "Invalid encrypted text or password!";
-            }
+
+        function updateLength(){
+            outLen.textContent = outputText.textContent.length;
         }
+
+        function encryptText(){
+            const pwd = password.value || '';
+            const txt = inputText.value || '';
+            if(!pwd){ setStatus('Password required', true); return }
+            try{
+                const cipher = CryptoJS.AES.encrypt(txt, pwd).toString();
+                outputText.textContent = cipher;
+                setStatus('Encrypted ✓');
+                updateLength();
+            }catch(e){ setStatus('Encryption failed', true) }
+        }
+
+        function decryptText(){
+            const pwd = password.value || '';
+            const txt = inputText.value || '';
+            if(!pwd){ setStatus('Password required', true); return }
+            try{
+                const bytes = CryptoJS.AES.decrypt(txt, pwd);
+                const dec = bytes.toString(CryptoJS.enc.Utf8);
+                if(!dec){ throw new Error('invalid') }
+                outputText.textContent = dec;
+                setStatus('Decrypted ✓');
+                updateLength();
+            }catch(e){ outputText.textContent = 'Invalid encrypted text or password!'; setStatus('Decryption failed', true); updateLength() }
+        }
+
+        encryptBtn.addEventListener('click', encryptText);
+        decryptBtn.addEventListener('click', decryptText);
+
+        copyBtn.addEventListener('click', async ()=>{
+            try{
+                await navigator.clipboard.writeText(outputText.textContent || '');
+                setStatus('Copied to clipboard');
+            }catch(e){ setStatus('Copy failed', true) }
+        });
+
+        clearBtn.addEventListener('click', ()=>{
+            outputText.textContent = '';
+            inputText.value = '';
+            password.value = '';
+            setStatus('Cleared');
+            updateLength();
+        });
+
+        downloadBtn.addEventListener('click', ()=>{
+            const data = outputText.textContent || '';
+            if(!data){ setStatus('Nothing to download', true); return }
+            const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'cypher-result.txt'; document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+            setStatus('Downloaded');
+        });
+
+        togglePwd.addEventListener('click', ()=>{
+            if(password.type === 'password'){ password.type = 'text'; togglePwd.textContent = 'Hide' }
+            else { password.type = 'password'; togglePwd.textContent = 'Show' }
+        });
+
+        swapBtn.addEventListener('click', ()=>{
+            const tmp = inputText.value; inputText.value = outputText.textContent || ''; outputText.textContent = tmp || '';
+            setStatus('Swapped input/output'); updateLength();
+        });
+
+        // keyboard shortcuts: Ctrl+Enter = Encrypt, Shift+Enter = Decrypt
+        inputText.addEventListener('keydown', (e)=>{
+            if(e.ctrlKey && e.key === 'Enter'){ encryptText(); }
+            if(e.shiftKey && e.key === 'Enter'){ decryptText(); }
+        });
+
+        // initialize
+        updateLength();
+        setStatus('Ready');
     </script>
 </body>
 </html>
