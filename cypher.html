@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cypher — Encrypt & Decrypt</title>
+    <title>Cypher — Encrypt & Decrypt (Files)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         :root{
@@ -14,6 +14,7 @@
             --accent-2:#60a5fa;
             --glass: rgba(255,255,255,0.04);
             --danger: #ff6b6b;
+            --success: #22c55e;
         }
         *{box-sizing:border-box}
         html,body{height:100%;margin:0}
@@ -38,7 +39,7 @@
         textarea,input[type="text"],input[type="password"],input[type="search"]{
             width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;font-size:14px;resize:vertical;
         }
-        textarea{min-height:160px}
+        textarea{min-height:120px}
         .controls{display:flex;gap:8px;margin-top:10px}
         .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:none;background:#0b1220;color:var(--accent);cursor:pointer}
         .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#072035}
@@ -52,7 +53,20 @@
         .row{display:flex;gap:8px}
         .opt{display:flex;gap:8px;align-items:center}
         .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);margin:10px 0;border-radius:2px}
-        .status{font-size:13px;color:var(--muted);min-height:18px}
+        .status{font-size:13px;color:var(--muted);min-height:20px;display:flex;align-items:center;gap:8px}
+
+        /* dropzone styles */
+        .dropzone{border:2px dashed rgba(255,255,255,0.06);border-radius:8px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.01))}
+        .dropzone.dragover{background:linear-gradient(180deg,rgba(79,209,197,0.05), rgba(96,165,250,0.03));border-color:rgba(79,209,197,0.6);color:var(--accent)}
+        .file-list{margin:10px 0 0 0;padding:0;list-style:none;color:var(--muted);max-height:140px;overflow:auto}
+        .file-list li{padding:6px 8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.01);display:flex;justify-content:space-between;align-items:center}
+
+        /* success animation */
+        .check{
+            width:28px;height:28px;border-radius:50%;background:var(--success);display:inline-flex;align-items:center;justify-content:center;color:#022;transform:scale(0.7);opacity:0;pointer-events:none
+        }
+        .check.show{animation:popfade 900ms ease forwards}
+        @keyframes popfade{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
 
         @media (max-width:880px){
             .app{grid-template-columns:1fr;}
@@ -77,21 +91,34 @@
                 <div style="display:flex;gap:8px;align-items:center">
                     <input id="password" type="password" placeholder="Enter a password (required)" />
                     <button id="togglePwd" class="btn ghost" title="Show/Hide password">Show</button>
+                    <button id="genPwd" class="btn ghost" title="Generate a strong password">Generate</button>
                 </div>
                 <div style="height:8px"></div>
-                <label for="inputText">Input (plaintext or ciphertext)</label>
-                <textarea id="inputText" placeholder="Paste text to encrypt or the ciphertext to decrypt..."></textarea>
+
+                <label>Files (drag & drop or click)</label>
+                <div id="dropzone" class="dropzone">Drop file(s) here or click to select</div>
+                <ul id="fileList" class="file-list"></ul>
 
                 <div class="controls">
-                    <button id="encryptBtn" class="btn primary">Encrypt</button>
-                    <button id="decryptBtn" class="btn">Decrypt</button>
-                    <button id="swapBtn" class="btn ghost">Swap ↔</button>
+                    <button id="encryptFilesBtn" class="btn primary">Encrypt File(s)</button>
+                    <button id="decryptFilesBtn" class="btn">Decrypt File(s)</button>
+                    <button id="clearFilesBtn" class="btn ghost">Clear List</button>
                 </div>
 
                 <div class="divider"></div>
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div class="small">Encoding: UTF-8 • Mode: AES</div>
-                    <div class="small">Output updates below</div>
+                    <div class="small">Files are processed locally. Encrypted files are saved as .cypher.json</div>
+                    <div class="small">Multiple files supported</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:10px">
+                <label for="inputText">Manual input (optional)</label>
+                <textarea id="inputText" placeholder="Paste text to encrypt or the ciphertext to decrypt..."></textarea>
+                <div class="controls" style="margin-top:8px">
+                    <button id="encryptBtn" class="btn">Encrypt text</button>
+                    <button id="decryptBtn" class="btn">Decrypt text</button>
+                    <button id="swapBtn" class="btn ghost">Swap ↔</button>
                 </div>
             </div>
         </section>
@@ -106,9 +133,9 @@
                         <button id="clearBtn" class="btn ghost">Clear</button>
                     </div>
                 </div>
-                <div class="outputArea" id="outputText" aria-live="polite">Nothing yet — encrypt or decrypt some text.</div>
+                <div class="outputArea" id="outputText" aria-live="polite">Nothing yet — encrypt or decrypt some text or files.</div>
                 <div class="meta">
-                    <div class="small status" id="status">Ready</div>
+                    <div class="status"><span id="status">Ready</span><span id="check" class="check">✓</span></div>
                     <div class="small">Length: <span id="outLen">0</span></div>
                 </div>
             </div>
@@ -119,19 +146,20 @@
                 </div>
                 <ul style="margin:8px 0 0 18px;color:var(--muted);font-size:13px">
                     <li>Use a strong password and keep it safe — lost passwords cannot be recovered.</li>
-                    <li>Encrypt small snippets or files (use download to save output).</li>
-                    <li>If decryption fails the password or ciphertext is likely incorrect.</li>
+                    <li>Encrypted files are JSON blobs containing the original filename and ciphertext.</li>
+                    <li>If decryption fails the password or file is likely incorrect.</li>
                 </ul>
             </div>
         </aside>
     </div>
 
     <script>
-        // Helper DOM refs
+        // Helpers
         const password = document.getElementById('password');
         const inputText = document.getElementById('inputText');
         const outputText = document.getElementById('outputText');
-        const status = document.getElementById('status');
+        const statusEl = document.getElementById('status');
+        const checkEl = document.getElementById('check');
         const outLen = document.getElementById('outLen');
 
         const encryptBtn = document.getElementById('encryptBtn');
@@ -140,70 +168,43 @@
         const clearBtn = document.getElementById('clearBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const togglePwd = document.getElementById('togglePwd');
+        const genPwd = document.getElementById('genPwd');
         const swapBtn = document.getElementById('swapBtn');
 
-        function setStatus(msg, warn=false){
-            status.textContent = msg;
-            status.style.color = warn ? 'var(--danger)' : 'var(--muted)';
+        const dropzone = document.getElementById('dropzone');
+        const fileList = document.getElementById('fileList');
+        const encryptFilesBtn = document.getElementById('encryptFilesBtn');
+        const decryptFilesBtn = document.getElementById('decryptFilesBtn');
+        const clearFilesBtn = document.getElementById('clearFilesBtn');
+
+        let droppedFiles = []; // {file:File, id:...}
+
+        function setStatus(msg, {warn=false, success=false} = {}){
+            statusEl.textContent = msg;
+            statusEl.style.color = warn ? 'var(--danger)' : 'var(--muted)';
+            if(success){
+                checkEl.classList.remove('show');
+                // trigger reflow
+                void checkEl.offsetWidth;
+                checkEl.classList.add('show');
+                setTimeout(()=>{ checkEl.classList.remove('show') }, 1500);
+            }
         }
 
-        function updateLength(){
-            outLen.textContent = outputText.textContent.length;
+        function updateLength(){ outLen.textContent = outputText.textContent.length }
+
+        // Password generator
+        function generatePassword(len = 14){
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}<>?';
+            const arr = new Uint32Array(len);
+            window.crypto.getRandomValues(arr);
+            let out = '';
+            for(let i=0;i<len;i++){ out += chars[arr[i] % chars.length] }
+            return out;
         }
-
-        function encryptText(){
-            const pwd = password.value || '';
-            const txt = inputText.value || '';
-            if(!pwd){ setStatus('Password required', true); return }
-            try{
-                const cipher = CryptoJS.AES.encrypt(txt, pwd).toString();
-                outputText.textContent = cipher;
-                setStatus('Encrypted ✓');
-                updateLength();
-            }catch(e){ setStatus('Encryption failed', true) }
-        }
-
-        function decryptText(){
-            const pwd = password.value || '';
-            const txt = inputText.value || '';
-            if(!pwd){ setStatus('Password required', true); return }
-            try{
-                const bytes = CryptoJS.AES.decrypt(txt, pwd);
-                const dec = bytes.toString(CryptoJS.enc.Utf8);
-                if(!dec){ throw new Error('invalid') }
-                outputText.textContent = dec;
-                setStatus('Decrypted ✓');
-                updateLength();
-            }catch(e){ outputText.textContent = 'Invalid encrypted text or password!'; setStatus('Decryption failed', true); updateLength() }
-        }
-
-        encryptBtn.addEventListener('click', encryptText);
-        decryptBtn.addEventListener('click', decryptText);
-
-        copyBtn.addEventListener('click', async ()=>{
-            try{
-                await navigator.clipboard.writeText(outputText.textContent || '');
-                setStatus('Copied to clipboard');
-            }catch(e){ setStatus('Copy failed', true) }
-        });
-
-        clearBtn.addEventListener('click', ()=>{
-            outputText.textContent = '';
-            inputText.value = '';
-            password.value = '';
-            setStatus('Cleared');
-            updateLength();
-        });
-
-        downloadBtn.addEventListener('click', ()=>{
-            const data = outputText.textContent || '';
-            if(!data){ setStatus('Nothing to download', true); return }
-            const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'cypher-result.txt'; document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-            setStatus('Downloaded');
+        genPwd.addEventListener('click', ()=>{
+            password.value = generatePassword(14);
+            setStatus('Password generated', {success:true});
         });
 
         togglePwd.addEventListener('click', ()=>{
@@ -211,20 +212,174 @@
             else { password.type = 'password'; togglePwd.textContent = 'Show' }
         });
 
-        swapBtn.addEventListener('click', ()=>{
-            const tmp = inputText.value; inputText.value = outputText.textContent || ''; outputText.textContent = tmp || '';
-            setStatus('Swapped input/output'); updateLength();
+        // Drag & Drop
+        ['dragenter','dragover'].forEach(ev=>{
+            dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); dropzone.classList.add('dragover') })
+        });
+        ['dragleave','drop','dragend'].forEach(ev=>{
+            dropzone.addEventListener(ev, (e)=>{ if(ev==='drop') e.preventDefault(); dropzone.classList.remove('dragover') })
         });
 
-        // keyboard shortcuts: Ctrl+Enter = Encrypt, Shift+Enter = Decrypt
-        inputText.addEventListener('keydown', (e)=>{
-            if(e.ctrlKey && e.key === 'Enter'){ encryptText(); }
-            if(e.shiftKey && e.key === 'Enter'){ decryptText(); }
+        dropzone.addEventListener('click', ()=>{
+            const inp = document.createElement('input'); inp.type='file'; inp.multiple=true; inp.onchange = ()=>{ handleFiles(inp.files) }; inp.click();
         });
+
+        dropzone.addEventListener('drop', (e)=>{
+            e.preventDefault(); const files = e.dataTransfer.files; handleFiles(files);
+        });
+
+        function handleFiles(fileListObj){
+            for(const f of fileListObj){
+                const id = Math.random().toString(36).slice(2,9);
+                droppedFiles.push({file: f, id});
+            }
+            renderFileList();
+        }
+
+        function renderFileList(){
+            fileList.innerHTML = '';
+            for(const item of droppedFiles){
+                const li = document.createElement('li');
+                li.textContent = item.file.name + ' (' + readableFileSize(item.file.size) + ')';
+                const rm = document.createElement('button'); rm.textContent='Remove'; rm.className='btn ghost'; rm.style.padding='6px 8px';
+                rm.onclick = ()=>{ droppedFiles = droppedFiles.filter(d=>d.id!==item.id); renderFileList(); };
+                li.appendChild(rm);
+                fileList.appendChild(li);
+            }
+            if(droppedFiles.length===0){ fileList.innerHTML = '<li style="color:var(--muted)">No files selected</li>' }
+        }
+
+        function readableFileSize(bytes){ const thresh = 1024; if(Math.abs(bytes) < thresh) return bytes + ' B'; const units = ['KB','MB','GB','TB']; let u = -1; do { bytes /= thresh; ++u; } while(Math.abs(bytes) >= thresh && u < units.length - 1); return bytes.toFixed(1)+' '+units[u]; }
+
+        // File -> ArrayBuffer -> WordArray
+        function arrayBufferToWordArray(ab){
+            const u8 = new Uint8Array(ab);
+            const len = u8.length;
+            const words = [];
+            for (let i = 0; i < len; i += 4) {
+                words.push(
+                    ((u8[i] << 24) | (u8[i+1] << 16) | (u8[i+2] << 8) | (u8[i+3]))
+                );
+            }
+            return CryptoJS.lib.WordArray.create(words, len);
+        }
+
+        function wordArrayToUint8Array(wordArray){
+            const len = wordArray.sigBytes;
+            const words = wordArray.words;
+            const u8 = new Uint8Array(len);
+            let index=0;
+            for(let i=0;i<words.length;i++){
+                let word = words[i];
+                u8[index++] = (word >> 24) & 0xFF; if(index>=len) break;
+                u8[index++] = (word >> 16) & 0xFF; if(index>=len) break;
+                u8[index++] = (word >> 8) & 0xFF; if(index>=len) break;
+                u8[index++] = word & 0xFF; if(index>=len) break;
+            }
+            return u8;
+        }
+
+        async function encryptFiles(){
+            const pwd = password.value || '';
+            if(!pwd){ setStatus('Password required', {warn:true}); return }
+            if(droppedFiles.length===0){ setStatus('No files to encrypt', {warn:true}); return }
+            for(const item of droppedFiles){
+                const f = item.file;
+                try{
+                    const ab = await f.arrayBuffer();
+                    const wordArr = arrayBufferToWordArray(ab);
+                    const cipher = CryptoJS.AES.encrypt(wordArr, pwd).toString();
+                    const payload = { filename: f.name, ciphertext: cipher };
+                    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+                    triggerDownload(blob, f.name + '.cypher.json');
+                    setStatus('Encrypted: ' + f.name, {success:true});
+                }catch(e){ setStatus('Failed: ' + f.name, {warn:true}) }
+            }
+        }
+
+        async function decryptFiles(){
+            const pwd = password.value || '';
+            if(!pwd){ setStatus('Password required', {warn:true}); return }
+            if(droppedFiles.length===0){ setStatus('No files to decrypt', {warn:true}); return }
+            for(const item of droppedFiles){
+                const f = item.file;
+                try{
+                    const txt = await f.text();
+                    let parsed;
+                    try{ parsed = JSON.parse(txt); }catch(e){ parsed = null }
+                    if(parsed && parsed.ciphertext && parsed.filename){
+                        const bytes = CryptoJS.AES.decrypt(parsed.ciphertext, pwd);
+                        const u8 = wordArrayToUint8Array(bytes);
+                        const blob = new Blob([u8], {type:'application/octet-stream'});
+                        triggerDownload(blob, parsed.filename);
+                        setStatus('Decrypted: ' + parsed.filename, {success:true});
+                    }else{
+                        setStatus('File format not recognized: ' + f.name, {warn:true});
+                    }
+                }catch(e){ setStatus('Failed: ' + f.name, {warn:true}) }
+            }
+        }
+
+        function triggerDownload(blob, filename){
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        }
+
+        encryptFilesBtn.addEventListener('click', encryptFiles);
+        decryptFilesBtn.addEventListener('click', decryptFiles);
+        clearFilesBtn.addEventListener('click', ()=>{ droppedFiles = []; renderFileList(); setStatus('Cleared file list') });
+
+        // Text encrypt/decrypt (preserve previous behaviour)
+        function encryptText(){
+            const pwd = password.value || '';
+            const txt = inputText.value || '';
+            if(!pwd){ setStatus('Password required', {warn:true}); return }
+            try{
+                const cipher = CryptoJS.AES.encrypt(txt, pwd).toString();
+                outputText.textContent = cipher;
+                setStatus('Encrypted', {success:true});
+                updateLength();
+            }catch(e){ setStatus('Encryption failed', {warn:true}) }
+        }
+
+        function decryptText(){
+            const pwd = password.value || '';
+            const txt = inputText.value || '';
+            if(!pwd){ setStatus('Password required', {warn:true}); return }
+            try{
+                const bytes = CryptoJS.AES.decrypt(txt, pwd);
+                const dec = bytes.toString(CryptoJS.enc.Utf8);
+                if(!dec){ throw new Error('invalid') }
+                outputText.textContent = dec;
+                setStatus('Decrypted', {success:true});
+                updateLength();
+            }catch(e){ outputText.textContent = 'Invalid encrypted text or password!'; setStatus('Decryption failed', {warn:true}); updateLength() }
+        }
+
+        encryptBtn.addEventListener('click', encryptText);
+        decryptBtn.addEventListener('click', decryptText);
+
+        copyBtn.addEventListener('click', async ()=>{
+            try{ await navigator.clipboard.writeText(outputText.textContent || ''); setStatus('Copied to clipboard', {success:true}) }catch(e){ setStatus('Copy failed', {warn:true}) }
+        });
+
+        clearBtn.addEventListener('click', ()=>{ outputText.textContent = ''; setStatus('Cleared'); updateLength(); });
+
+        downloadBtn.addEventListener('click', ()=>{
+            const data = outputText.textContent || '';
+            if(!data){ setStatus('Nothing to download', {warn:true}); return }
+            const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
+            triggerDownload(blob, 'cypher-result.txt');
+            setStatus('Downloaded', {success:true});
+        });
+
+        swapBtn.addEventListener('click', ()=>{ const tmp = inputText.value; inputText.value = outputText.textContent || ''; outputText.textContent = tmp || ''; setStatus('Swapped input/output'); updateLength(); });
+
+        // Keyboard shortcuts
+        inputText.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === 'Enter'){ encryptText(); } if(e.shiftKey && e.key === 'Enter'){ decryptText(); } });
 
         // initialize
-        updateLength();
-        setStatus('Ready');
+        renderFileList(); updateLength(); setStatus('Ready');
     </script>
 </body>
 </html>
