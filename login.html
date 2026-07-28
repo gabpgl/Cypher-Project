@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cypher Login</title>
+
+<style>
+:root{
+    --bg1:#000;
+    --bg2:#020403;
+    --matrix:#00ff66;
+    --gold:#D4AF37;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Inter,Segoe UI,Arial,sans-serif;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:
+        radial-gradient(circle at 10% 20%, rgba(0,255,102,.05), transparent 12%),
+        radial-gradient(circle at 90% 80%, rgba(0,255,102,.04), transparent 14%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+}
+
+canvas{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    opacity:.35;
+}
+
+.container{
+    position:relative;
+    z-index:1;
+    width:100%;
+    height:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.login-box{
+    width:380px;
+    padding:40px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    backdrop-filter:blur(8px);
+    border:1px solid rgba(0,255,102,.1);
+    box-shadow:0 0 50px rgba(0,0,0,.8);
+}
+
+.logo{
+    width:75px;
+    height:75px;
+    margin:auto;
+    border-radius:50%;
+    background:linear-gradient(135deg,#b8860b,#ffd86b);
+    color:#111;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:34px;
+    font-weight:bold;
+}
+
+h1{
+    text-align:center;
+    color:var(--gold);
+    margin:18px 0 5px;
+}
+
+p{
+    text-align:center;
+    color:#bbb;
+    margin-bottom:30px;
+    font-size:14px;
+}
+
+input{
+    width:100%;
+    margin-bottom:15px;
+    padding:14px;
+    border:none;
+    outline:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.05);
+    color:white;
+    border:1px solid rgba(255,255,255,.08);
+    font-size:15px;
+}
+
+input:focus{
+    border-color:var(--matrix);
+    box-shadow:0 0 12px rgba(0,255,102,.3);
+}
+
+button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:15px;
+    color:#000;
+    background:linear-gradient(90deg,#00ff66,#66ff99);
+    transition:.25s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 20px rgba(0,255,102,.35);
+}
+
+#error{
+    color:#ff4d4d;
+    text-align:center;
+    margin-top:18px;
+    display:none;
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div class="container">
+    <div class="login-box">
+
+        <div class="logo">C</div>
+
+        <h1>Cypher</h1>
+        <p>Secure Access Required</p>
+
+        <input id="username" type="text" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+
+        <button onclick="login()">Login</button>
+
+        <div id="error">Invalid username or password.</div>
+
+    </div>
+</div>
+
+<script>
+const USERNAME = "admin";
+const PASSWORD = "kMFyYmuqhNAbTlnxi5OCohg79OG2kK1edTcR";
+
+function login(){
+
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+
+    if(user === USERNAME && pass === PASSWORD){
+        window.location.href = "cypher.html";
+    }else{
+        document.getElementById("error").style.display = "block";
+    }
+}
+
+document.addEventListener("keydown",e=>{
+    if(e.key==="Enter") login();
+});
+
+/* Matrix Background */
+
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+
+const chars="アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=<>[]{}";
+
+let w,h,fontSize,columns,drops;
+
+function resize(){
+    w=canvas.width=window.innerWidth;
+    h=canvas.height=window.innerHeight;
+    fontSize=w<700?14:16;
+    columns=Math.floor(w/fontSize);
+    drops=new Array(columns).fill(0).map(()=>Math.random()*-50);
+}
+
+window.addEventListener("resize",resize);
+resize();
+
+function draw(){
+
+    ctx.fillStyle="rgba(0,0,0,.08)";
+    ctx.fillRect(0,0,w,h);
+
+    ctx.font=fontSize+"px monospace";
+
+    for(let i=0;i<columns;i++){
+
+        const text=chars[Math.floor(Math.random()*chars.length)];
+        const x=i*fontSize;
+        const y=drops[i]*fontSize;
+
+        ctx.fillStyle=Math.random()<0.02
+            ?"rgba(220,255,235,.9)"
+            :"rgba(0,255,102,.55)";
+
+        ctx.fillText(text,x,y);
+
+        if(y>h && Math.random()>0.975)
+            drops[i]=0;
+
+        drops[i]++;
+    }
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+
+</body>
+</html>
