@@ -7,379 +7,595 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         :root{
-            --bg:#0f1720;
-            --card:#0f1728;
-            --muted:#9aa4b2;
-            --accent:#4fd1c5;
-            --accent-2:#60a5fa;
-            --glass: rgba(255,255,255,0.04);
-            --danger: #ff6b6b;
-            --success: #22c55e;
+            --bg1: #000000;
+            --bg2: #020403;
+            --gold: #D4AF37;
+            --emerald: #10B981;
+            --sapphire: #0ea5e9;
+            --ruby: #ef4444;
+            --matrix: #00ff66;
+            --muted: rgba(255,255,255,0.65);
+            --card: rgba(255,255,255,0.03);
         }
         *{box-sizing:border-box}
         html,body{height:100%;margin:0}
         body{
-            font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-            background: linear-gradient(180deg,var(--bg) 0%, #071127 100%);
-            color:#e6eef6;
-            display:flex;align-items:center;justify-content:center;padding:24px;
+            font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(0,255,102,0.05), transparent 12%),
+                radial-gradient(circle at 90% 80%, rgba(0,255,102,0.04), transparent 14%),
+                linear-gradient(180deg,var(--bg1),var(--bg2));
+            color:#fff;display:flex;align-items:center;justify-content:center;padding:28px;
         }
-        .app{
-            width:100%;max-width:1000px;background:linear-gradient(180deg,var(--card), rgba(12,18,30,0.9));
-            border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);display:grid;grid-template-columns:1fr 420px;gap:18px;align-items:start;
+
+        /* animated matrix rain canvas */
+        canvas.bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.35}
+
+        .app{position:relative;z-index:1;width:100%;max-width:1100px;background:linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+            backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+            border-radius:18px;padding:20px 22px;box-shadow:0 30px 80px rgba(0,0,0,0.8), 0 0 60px rgba(0,255,102,0.04);display:grid;grid-template-columns:1fr;gap:16px;align-items:start;border:1px solid rgba(0,255,102,0.08);
         }
-        header{grid-column:1 / -1;display:flex;align-items:center;gap:12px}
-        .brand{display:flex;flex-direction:column}
-        .brand h1{margin:0;font-size:18px;letter-spacing:0.2px}
+
+        header{display:flex;align-items:center;gap:12px}
+        .logo{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#b8860b,#ffd86b);display:flex;align-items:center;justify-content:center;color:#0b0b0b;font-weight:800;font-size:22px;box-shadow:0 0 24px rgba(0,255,102,0.15)}
+        .brand h1{margin:0;font-size:22px;color:var(--gold)}
         .brand p{margin:0;color:var(--muted);font-size:13px}
-        .left{padding:6px}
-        .card{background:var(--glass);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:14px}
 
-        label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-        textarea,input[type="text"],input[type="password"],input[type="search"]{
-            width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;font-size:14px;resize:vertical;
-        }
-        textarea{min-height:120px}
-        .controls{display:flex;gap:8px;margin-top:10px}
-        .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:none;background:#0b1220;color:var(--accent);cursor:pointer}
-        .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#072035}
-        .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
-        .btn.warn{background:var(--danger);color:#fff}
+        .top-controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+        select.theme{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 14px;border-radius:999px}
+
+        .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+        @media (max-width:980px){.grid{grid-template-columns:1fr}}
+
+        .card{background:var(--card);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.04)}
+        label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+        textarea,input[type='password']{width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.05);background:rgba(0,0,0,0.25);color:inherit;font-size:14px;min-height:140px}
+
+        .controls{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+        .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--gold);cursor:pointer;font-weight:600;transition:transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease}
+        .btn:hover{transform:translateY(-1px);border-color:rgba(0,255,102,0.35);box-shadow:0 4px 18px rgba(0,255,102,0.12)}
+        .btn:active{transform:translateY(0)}
+        .btn.primary{background:linear-gradient(90deg,rgba(0,255,102,0.16),rgba(0,255,102,0.06));color:var(--matrix);border:1px solid rgba(0,255,102,0.25)}
+        .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.05);color:var(--muted)}
+        .btn.warn{background:var(--ruby);color:#111;border:1px solid rgba(239,68,68,0.4)}
+
         .right{display:flex;flex-direction:column;gap:12px}
-        .outputArea{min-height:200px;padding:12px;border-radius:8px;background:rgba(10,14,20,0.6);border:1px dashed rgba(255,255,255,0.03);overflow:auto;word-break:break-word}
-        .meta{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
-        .small{font-size:12px;color:var(--muted)}
-        .actions{display:flex;gap:8px;margin-top:10px}
-        .row{display:flex;gap:8px}
-        .opt{display:flex;gap:8px;align-items:center}
-        .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);margin:10px 0;border-radius:2px}
-        .status{font-size:13px;color:var(--muted);min-height:20px;display:flex;align-items:center;gap:8px}
+        .outputArea{min-height:220px;padding:16px;border-radius:16px;background:linear-gradient(180deg, rgba(0,0,0,0.4), rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.04);overflow:auto;white-space:pre-wrap;word-break:break-word}
 
-        /* dropzone styles */
-        .dropzone{border:2px dashed rgba(255,255,255,0.06);border-radius:8px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.01))}
-        .dropzone.dragover{background:linear-gradient(180deg,rgba(79,209,197,0.05), rgba(96,165,250,0.03));border-color:rgba(79,209,197,0.6);color:var(--accent)}
-        .file-list{margin:10px 0 0 0;padding:0;list-style:none;color:var(--muted);max-height:140px;overflow:auto}
-        .file-list li{padding:6px 8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.01);display:flex;justify-content:space-between;align-items:center}
+        .meta{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+        .small{font-size:13px;color:var(--muted)}
 
-        /* success animation */
-        .check{
-            width:28px;height:28px;border-radius:50%;background:var(--success);display:inline-flex;align-items:center;justify-content:center;color:#022;transform:scale(0.7);opacity:0;pointer-events:none
-        }
-        .check.show{animation:popfade 900ms ease forwards}
-        @keyframes popfade{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+        /* dropzone */
+        .dropzone{border:2px dashed rgba(255,255,255,0.08);border-radius:16px;padding:14px;text-align:center;color:var(--muted);cursor:pointer;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.01));margin-top:8px;transition:border-color 150ms ease,color 150ms ease}
+        .dropzone.dragover{border-color:rgba(0,255,102,0.5);background:linear-gradient(180deg,rgba(0,255,102,0.04),transparent);color:var(--matrix)}
+        .file-list{margin:10px 0 0 0;padding:0;list-style:none;color:var(--muted);max-height:260px;overflow:auto}
+        .file-item{padding:10px 14px;border-radius:999px;margin-bottom:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);display:flex;gap:12px;align-items:center}
+        .file-meta{flex:1}
+        .file-actions{display:flex;gap:8px}
 
-        @media (max-width:880px){
-            .app{grid-template-columns:1fr;}
-            .right{order:2}
-        }
+        .progress-wrap{height:10px;background:rgba(255,255,255,0.04);border-radius:999px;margin-top:8px}
+        .progress-bar{height:100%;background:linear-gradient(90deg,var(--matrix), rgba(0,255,102,0.6));width:0;border-radius:999px}
+
+        /* password strength */
+        .pw-strength{height:10px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;margin-top:8px}
+        .pw-bar{height:100%;width:0;background:linear-gradient(90deg,#ff6b6b,#f6c34a,#22c55e)}
+        .pw-label{font-size:13px;margin-top:6px;color:var(--muted)}
+
+        /* inspect pane */
+        .inspect{font-size:13px;color:var(--muted);white-space:pre-wrap}
+
+        /* success animation (gold) */
+        .check{width:30px;height:30px;border-radius:50%;background:var(--gold);display:inline-flex;align-items:center;justify-content:center;color:#111;transform:scale(0.6);opacity:0}
+        .check.show{animation:goldpop 800ms cubic-bezier(.2,.9,.3,1) forwards}
+        @keyframes goldpop{0%{opacity:0;transform:scale(.6)}50%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+
     </style>
 </head>
 <body>
-    <div class="app" role="application">
+    <canvas class="bg-canvas"></canvas>
+    <div class="app">
         <header>
-            <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#032; font-weight:700">C</div>
+            <div class="logo">C</div>
             <div class="brand">
                 <h1>Cypher</h1>
-                <p>Quick AES encrypt/decrypt in your browser — data never leaves your machine</p>
+                <p>Fast AES encrypt/decrypt — runs entirely in your browser</p>
             </div>
-            <div style="margin-left:auto" class="small">AES • CryptoJS</div>
+            <div class="top-controls">
+                <select id="themeSelect" class="theme" title="Theme">
+                    <option value="gold">Gold</option>
+                    <option value="emerald">Emerald</option>
+                    <option value="sapphire">Sapphire</option>
+                    <option value="ruby">Ruby</option>
+                    <option value="midnight">Midnight</option>
+                </select>
+                <button id="folderBtn" class="btn ghost">Select Folder</button>
+            </div>
         </header>
 
-        <section class="left">
-            <div class="card">
-                <label for="password">Password</label>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <input id="password" type="password" placeholder="Enter a password (required)" />
-                    <button id="togglePwd" class="btn ghost" title="Show/Hide password">Show</button>
-                    <button id="genPwd" class="btn ghost" title="Generate a strong password">Generate</button>
-                </div>
-                <div style="height:8px"></div>
+        <div class="grid">
+            <section>
+                <div class="card">
+                    <label for="password">Password</label>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input id="password" type="password" placeholder="Enter a password (required)" />
+                        <button id="togglePwd" class="btn ghost">Show</button>
+                        <button id="genPwd" class="btn ghost">Generate</button>
+                    </div>
+                    <div class="pw-strength" aria-hidden>
+                        <div id="pwBar" class="pw-bar"></div>
+                    </div>
+                    <div id="pwLabel" class="pw-label">Strength: </div>
 
-                <label>Files (drag & drop or click)</label>
-                <div id="dropzone" class="dropzone">Drop file(s) here or click to select</div>
-                <ul id="fileList" class="file-list"></ul>
+                    <div style="height:10px"></div>
 
-                <div class="controls">
-                    <button id="encryptFilesBtn" class="btn primary">Encrypt File(s)</button>
-                    <button id="decryptFilesBtn" class="btn">Decrypt File(s)</button>
-                    <button id="clearFilesBtn" class="btn ghost">Clear List</button>
-                </div>
+                    <label for="files">Files & Folders</label>
+                    <div id="dropzone" class="dropzone">Drop file(s) or folder here or click to select</div>
+                    <ul id="fileList" class="file-list"><li style="color:var(--muted)">No files selected</li></ul>
+                    <div class="controls" style="margin-top:10px">
+                        <button id="encryptFilesBtn" class="btn primary">Encrypt Selected</button>
+                        <button id="decryptFilesBtn" class="btn">Decrypt Selected</button>
+                        <button id="clearFilesBtn" class="btn ghost">Clear</button>
+                    </div>
 
-                <div class="divider"></div>
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div class="small">Files are processed locally. Encrypted files are saved as .cypher.json</div>
-                    <div class="small">Multiple files supported</div>
-                </div>
-            </div>
+                    <div class="divider" style="height:1px;margin:12px 0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent)"></div>
 
-            <div class="card" style="margin-top:10px">
-                <label for="inputText">Manual input (optional)</label>
-                <textarea id="inputText" placeholder="Paste text to encrypt or the ciphertext to decrypt..."></textarea>
-                <div class="controls" style="margin-top:8px">
-                    <button id="encryptBtn" class="btn">Encrypt text</button>
-                    <button id="decryptBtn" class="btn">Decrypt text</button>
-                    <button id="swapBtn" class="btn ghost">Swap ↔</button>
-                </div>
-            </div>
-        </section>
-
-        <aside class="right">
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div><strong>Result</strong></div>
-                    <div class="opt">
-                        <button id="copyBtn" class="btn ghost">Copy</button>
-                        <button id="downloadBtn" class="btn ghost">Download</button>
-                        <button id="clearBtn" class="btn ghost">Clear</button>
+                    <label for="inputText">Text (optional)</label>
+                    <textarea id="inputText" placeholder="Type or paste text to encrypt/decrypt..."></textarea>
+                    <div class="controls">
+                        <button id="encryptBtn" class="btn">Encrypt</button>
+                        <button id="decryptBtn" class="btn">Decrypt</button>
+                        <button id="swapBtn" class="btn ghost">Swap</button>
                     </div>
                 </div>
-                <div class="outputArea" id="outputText" aria-live="polite">Nothing yet — encrypt or decrypt some text or files.</div>
-                <div class="meta">
-                    <div class="status"><span id="status">Ready</span><span id="check" class="check">✓</span></div>
-                    <div class="small">Length: <span id="outLen">0</span></div>
-                </div>
-            </div>
+            </section>
 
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div><strong>Tips</strong></div>
+            <aside class="right">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <strong>Result</strong>
+                        <div style="display:flex;gap:8px">
+                            <button id="copyBtn" class="btn ghost">Copy</button>
+                            <button id="downloadBtn" class="btn ghost">Download</button>
+                            <button id="clearBtn" class="btn ghost">Clear</button>
+                        </div>
+                    </div>
+
+                    <div id="outputText" class="outputArea">Nothing yet — encrypt or decrypt some text or files.</div>
+
+                    <div class="meta">
+                        <div class="status"><span id="status">Ready</span><span id="check" class="check">✓</span></div>
+                        <div class="small">Length: <span id="outLen">0</span></div>
+                    </div>
                 </div>
-                <ul style="margin:8px 0 0 18px;color:var(--muted);font-size:13px">
-                    <li>Use a strong password and keep it safe — lost passwords cannot be recovered.</li>
-                    <li>Encrypted files are JSON blobs containing the original filename and ciphertext.</li>
-                    <li>If decryption fails the password or file is likely incorrect.</li>
-                </ul>
-            </div>
-        </aside>
+
+                <div class="card">
+                    <strong>Inspect Encrypted File</strong>
+                    <div style="margin-top:8px">
+                        <input id="inspectInput" type="file" accept=".cypher.json" />
+                    </div>
+                    <div id="inspectPane" class="inspect" style="margin-top:10px">Drop a .cypher.json to inspect metadata without decrypting.</div>
+                </div>
+            </aside>
+        </div>
     </div>
 
     <script>
-        // Helpers
-        const password = document.getElementById('password');
-        const inputText = document.getElementById('inputText');
-        const outputText = document.getElementById('outputText');
-        const statusEl = document.getElementById('status');
-        const checkEl = document.getElementById('check');
-        const outLen = document.getElementById('outLen');
+        // --- Utilities ---
+        const $ = id => document.getElementById(id);
+        const password = $('password');
+        const inputText = $('inputText');
+        const outputText = $('outputText');
+        const statusEl = $('status');
+        const checkEl = $('check');
+        const outLen = $('outLen');
 
-        const encryptBtn = document.getElementById('encryptBtn');
-        const decryptBtn = document.getElementById('decryptBtn');
-        const copyBtn = document.getElementById('copyBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const togglePwd = document.getElementById('togglePwd');
-        const genPwd = document.getElementById('genPwd');
-        const swapBtn = document.getElementById('swapBtn');
+        const encryptBtn = $('encryptBtn');
+        const decryptBtn = $('decryptBtn');
+        const copyBtn = $('copyBtn');
+        const clearBtn = $('clearBtn');
+        const downloadBtn = $('downloadBtn');
+        const togglePwd = $('togglePwd');
+        const genPwd = $('genPwd');
+        const swapBtn = $('swapBtn');
 
-        const dropzone = document.getElementById('dropzone');
-        const fileList = document.getElementById('fileList');
-        const encryptFilesBtn = document.getElementById('encryptFilesBtn');
-        const decryptFilesBtn = document.getElementById('decryptFilesBtn');
-        const clearFilesBtn = document.getElementById('clearFilesBtn');
+        const dropzone = $('dropzone');
+        const fileListEl = $('fileList');
+        const encryptFilesBtn = $('encryptFilesBtn');
+        const decryptFilesBtn = $('decryptFilesBtn');
+        const clearFilesBtn = $('clearFilesBtn');
+        const folderBtn = $('folderBtn');
 
-        let droppedFiles = []; // {file:File, id:...}
+        const pwBar = $('pwBar');
+        const pwLabel = $('pwLabel');
+        const themeSelect = $('themeSelect');
+
+        const inspectInput = $('inspectInput');
+        const inspectPane = $('inspectPane');
+
+        const canvas = document.querySelector('canvas.bg-canvas');
+
+        // file store: {id, file, path} where path preserves folder structure
+        let files = [];
 
         function setStatus(msg, {warn=false, success=false} = {}){
             statusEl.textContent = msg;
-            statusEl.style.color = warn ? 'var(--danger)' : 'var(--muted)';
+            statusEl.style.color = warn ? 'var(--ruby)' : '';
             if(success){
                 checkEl.classList.remove('show');
-                // trigger reflow
                 void checkEl.offsetWidth;
                 checkEl.classList.add('show');
-                setTimeout(()=>{ checkEl.classList.remove('show') }, 1500);
+                setTimeout(()=> checkEl.classList.remove('show'), 1200);
             }
         }
 
         function updateLength(){ outLen.textContent = outputText.textContent.length }
 
-        // Password generator
+        // --- Password strength ---
+        function estimatePasswordStrength(pw){
+            if(!pw) return {score:0,label:'Empty'};
+            let score = 0;
+            if(pw.length >= 8) score++;
+            if(pw.length >= 12) score++;
+            if(/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+            if(/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
+            let label = ['Very Weak','Weak','Medium','Strong','Very Strong'][Math.min(score,4)];
+            return {score, label};
+        }
+        function updatePasswordUI(){
+            const pw = password.value || '';
+            const {score,label} = estimatePasswordStrength(pw);
+            const pct = (score/4)*100;
+            pwBar.style.width = pct + '%';
+            pwLabel.textContent = 'Strength: ' + label;
+            if(score <=1) pwBar.style.filter = 'hue-rotate(-20deg)';
+            else if(score==2) pwBar.style.filter = 'hue-rotate(20deg)';
+            else if(score==3) pwBar.style.filter = 'hue-rotate(80deg)';
+            else pwBar.style.filter = 'hue-rotate(100deg)';
+        }
+        password.addEventListener('input', updatePasswordUI);
+
         function generatePassword(len = 14){
             const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}<>?';
             const arr = new Uint32Array(len);
             window.crypto.getRandomValues(arr);
             let out = '';
-            for(let i=0;i<len;i++){ out += chars[arr[i] % chars.length] }
+            for(let i=0;i<len;i++){ out += chars[arr[i] % chars.length]; }
             return out;
         }
-        genPwd.addEventListener('click', ()=>{
-            password.value = generatePassword(14);
-            setStatus('Password generated', {success:true});
+        genPwd.addEventListener('click', ()=>{ password.value = generatePassword(16); updatePasswordUI(); setStatus('Password generated', {success:true}); });
+        togglePwd.addEventListener('click', ()=>{ if(password.type==='password'){ password.type='text'; togglePwd.textContent='Hide' } else { password.type='password'; togglePwd.textContent='Show' } });
+
+        // --- Theme switching ---
+        themeSelect.addEventListener('change', ()=>{
+            const t = themeSelect.value;
+            if(t==='gold') document.documentElement.style.setProperty('--gold','#D4AF37');
+            if(t==='emerald') document.documentElement.style.setProperty('--gold','#10B981');
+            if(t==='sapphire') document.documentElement.style.setProperty('--gold','#0ea5e9');
+            if(t==='ruby') document.documentElement.style.setProperty('--gold','#ef4444');
+            if(t==='midnight') document.documentElement.style.setProperty('--gold','#9CA3AF');
         });
 
-        togglePwd.addEventListener('click', ()=>{
-            if(password.type === 'password'){ password.type = 'text'; togglePwd.textContent = 'Hide' }
-            else { password.type = 'password'; togglePwd.textContent = 'Show' }
-        });
+        // --- Animated background (matrix digital rain) ---
+        (function startMatrixRain(){
+            const ctx = canvas.getContext('2d');
+            const glyphs = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-*/=<>[]{}';
+            let W, H, fontSize, columns, drops;
 
-        // Drag & Drop
-        ['dragenter','dragover'].forEach(ev=>{
-            dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); dropzone.classList.add('dragover') })
-        });
-        ['dragleave','drop','dragend'].forEach(ev=>{
-            dropzone.addEventListener(ev, (e)=>{ if(ev==='drop') e.preventDefault(); dropzone.classList.remove('dragover') })
-        });
-
-        dropzone.addEventListener('click', ()=>{
-            const inp = document.createElement('input'); inp.type='file'; inp.multiple=true; inp.onchange = ()=>{ handleFiles(inp.files) }; inp.click();
-        });
-
-        dropzone.addEventListener('drop', (e)=>{
-            e.preventDefault(); const files = e.dataTransfer.files; handleFiles(files);
-        });
-
-        function handleFiles(fileListObj){
-            for(const f of fileListObj){
-                const id = Math.random().toString(36).slice(2,9);
-                droppedFiles.push({file: f, id});
+            function resize(){
+                W = canvas.width = innerWidth;
+                H = canvas.height = innerHeight;
+                fontSize = W < 700 ? 14 : 16;
+                columns = Math.floor(W / fontSize);
+                drops = new Array(columns).fill(0).map(()=> Math.random() * -50);
             }
-            renderFileList();
+            window.addEventListener('resize', resize); resize();
+
+            function draw(){
+                ctx.fillStyle = 'rgba(0,0,0,0.08)';
+                ctx.fillRect(0,0,W,H);
+                ctx.font = fontSize + 'px monospace';
+                for(let i=0;i<columns;i++){
+                    const char = glyphs[Math.floor(Math.random()*glyphs.length)];
+                    const x = i * fontSize;
+                    const y = drops[i] * fontSize;
+                    // brighter leading character, dimmer trail via fillRect fade above
+                    ctx.fillStyle = Math.random() < 0.02 ? 'rgba(220,255,235,0.9)' : 'rgba(0,255,102,0.55)';
+                    ctx.fillText(char, x, y);
+                    if(y > H && Math.random() > 0.975){ drops[i] = 0; }
+                    drops[i]++;
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        // --- File handling and preview ---
+        const hiddenFileInput = document.createElement('input'); hiddenFileInput.type='file'; hiddenFileInput.multiple=true; hiddenFileInput.webkitdirectory = false;
+        hiddenFileInput.addEventListener('change', ()=> handleFiles(hiddenFileInput.files));
+
+        dropzone.addEventListener('click', ()=> hiddenFileInput.click());
+        ['dragenter','dragover'].forEach(ev=> dropzone.addEventListener(ev, e=>{ e.preventDefault(); dropzone.classList.add('dragover'); }));
+        ['dragleave','dragend'].forEach(ev=> dropzone.addEventListener(ev, e=>{ e.preventDefault(); dropzone.classList.remove('dragover'); }));
+        dropzone.addEventListener('drop', async (e)=>{
+            e.preventDefault(); dropzone.classList.remove('dragover');
+            const items = e.dataTransfer.items;
+            // handle folder drops if available
+            if(items && items.length){
+                for(const it of items){
+                    const entry = it.webkitGetAsEntry && it.webkitGetAsEntry();
+                    if(entry && entry.isDirectory){
+                        await readDirectoryEntry(entry, entry.name);
+                    }else if(it.getAsFile){
+                        const f = it.getAsFile(); if(f) files.push({id:Math.random().toString(36).slice(2,9), file:f, path:f.name});
+                    }
+                }
+            }else{ handleFiles(e.dataTransfer.files); }
+            renderFiles();
+        });
+
+        // Select folder via File System Access API when available
+        folderBtn.addEventListener('click', async ()=>{
+            if(window.showDirectoryPicker){
+                try{
+                    const dir = await window.showDirectoryPicker();
+                    for await (const [name, handle] of dir.entries()){
+                        await traverseHandle(handle, name);
+                    }
+                    renderFiles();
+                }catch(e){ console.warn('Folder pick cancelled or not supported', e); }
+            }else{
+                setStatus('Folder picking not supported in this browser', {warn:true});
+            }
+        });
+
+        async function traverseHandle(handle, path){
+            if(handle.kind === 'file'){
+                const file = await handle.getFile(); files.push({id:Math.random().toString(36).slice(2,9), file, path});
+            }else if(handle.kind === 'directory'){
+                for await (const [name, entry] of handle.entries()){
+                    await traverseHandle(entry, path + '/' + name);
+                }
+            }
         }
 
-        function renderFileList(){
-            fileList.innerHTML = '';
-            for(const item of droppedFiles){
-                const li = document.createElement('li');
-                li.textContent = item.file.name + ' (' + readableFileSize(item.file.size) + ')';
-                const rm = document.createElement('button'); rm.textContent='Remove'; rm.className='btn ghost'; rm.style.padding='6px 8px';
-                rm.onclick = ()=>{ droppedFiles = droppedFiles.filter(d=>d.id!==item.id); renderFileList(); };
-                li.appendChild(rm);
-                fileList.appendChild(li);
+        async function readDirectoryEntry(entry, basePath){
+            if(entry.isFile){
+                entry.file(f=>{ files.push({id:Math.random().toString(36).slice(2,9), file:f, path: basePath + '/' + f.name}); renderFiles(); });
+            }else if(entry.isDirectory){
+                const reader = entry.createReader();
+                function readBatch(){
+                    reader.readEntries(async (entries)=>{
+                        if(entries.length===0) return;
+                        for(const en of entries){ await readDirectoryEntry(en, basePath + '/' + entry.name); }
+                        readBatch();
+                    });
+                }
+                readBatch();
             }
-            if(droppedFiles.length===0){ fileList.innerHTML = '<li style="color:var(--muted)">No files selected</li>' }
         }
 
-        function readableFileSize(bytes){ const thresh = 1024; if(Math.abs(bytes) < thresh) return bytes + ' B'; const units = ['KB','MB','GB','TB']; let u = -1; do { bytes /= thresh; ++u; } while(Math.abs(bytes) >= thresh && u < units.length - 1); return bytes.toFixed(1)+' '+units[u]; }
+        function handleFiles(list){
+            for(const f of list){ files.push({id:Math.random().toString(36).slice(2,9), file: f, path: f.name}); }
+            renderFiles();
+        }
 
-        // File -> ArrayBuffer -> WordArray
+        function renderFiles(){
+            fileListEl.innerHTML='';
+            if(files.length===0){ fileListEl.innerHTML = '<li style="color:var(--muted)">No files selected</li>'; return }
+            for(const item of files){
+                const li = document.createElement('li'); li.className='file-item';
+                const icon = document.createElement('div'); icon.textContent = getFileIcon(item.file.name, item.file.type); icon.style.fontSize='20px';
+                const meta = document.createElement('div'); meta.className='file-meta';
+                const name = document.createElement('div'); name.innerHTML = '<strong>' + escapeHtml(item.path) + '</strong>';
+                const sub = document.createElement('div'); sub.style.color='var(--muted)'; sub.style.fontSize='13px'; sub.textContent = readableFileSize(item.file.size) + ' • ' + (item.file.type || 'Unknown');
+                meta.appendChild(name); meta.appendChild(sub);
+                // preview extra: for images show dimensions
+                if(item.file.type.startsWith('image/')){
+                    const img = document.createElement('img'); img.style.maxWidth='80px'; img.style.maxHeight='60px'; img.style.borderRadius='6px';
+                    const url = URL.createObjectURL(item.file); img.src = url; img.onload = ()=>{ URL.revokeObjectURL(url); };
+                    li.appendChild(icon); li.appendChild(img); li.appendChild(meta);
+                }else{
+                    li.appendChild(icon); li.appendChild(meta);
+                }
+                const actions = document.createElement('div'); actions.className='file-actions';
+                const inspectBtn = document.createElement('button'); inspectBtn.className='btn ghost'; inspectBtn.textContent='Inspect'; inspectBtn.onclick = ()=> inspectFile(item);
+                const removeBtn = document.createElement('button'); removeBtn.className='btn ghost'; removeBtn.textContent='Remove'; removeBtn.onclick = ()=>{ files = files.filter(f=>f.id!==item.id); renderFiles(); };
+                actions.appendChild(inspectBtn); actions.appendChild(removeBtn);
+                li.appendChild(actions);
+                fileListEl.appendChild(li);
+            }
+        }
+
+        function getFileIcon(name, type){
+            if(type.startsWith('image/')) return '🖼';
+            if(type==='application/pdf' || name.toLowerCase().endsWith('.pdf')) return '📄';
+            if(type.startsWith('text/') || name.toLowerCase().endsWith('.txt')) return '📄';
+            if(name.toLowerCase().endsWith('.zip')) return '🗜️';
+            if(name.toLowerCase().endsWith('.doc')||name.toLowerCase().endsWith('.docx')) return '📄';
+            return '📁';
+        }
+
+        function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function readableFileSize(bytes){ const thresh = 1024; if(Math.abs(bytes) < thresh) return bytes + ' B'; const units = ['KB','MB','GB','TB']; let u = -1; do{ bytes /= thresh; ++u; } while(Math.abs(bytes) >= thresh && u < units.length - 1); return bytes.toFixed(1)+' '+units[u]; }
+
+        // --- Chunked read with progress ---
+        function readFileChunks(file, onProgress){
+            return new Promise((resolve,reject)=>{
+                const chunkSize = 1024*1024; // 1MB
+                const chunks = [];
+                let offset = 0;
+                const reader = new FileReader();
+                reader.onerror = reject;
+                reader.onload = e=>{
+                    chunks.push(new Uint8Array(e.target.result));
+                    offset += e.target.result.byteLength;
+                    if(onProgress) onProgress(offset / file.size);
+                    if(offset < file.size){ readNext(); } else { resolve(concatUint8(chunks)); }
+                };
+                function readNext(){ const slice = file.slice(offset, offset + chunkSize); reader.readAsArrayBuffer(slice); }
+                readNext();
+            });
+        }
+        function concatUint8(chunks){ let total=0; for(const c of chunks) total+=c.length; const out=new Uint8Array(total); let off=0; for(const c of chunks){ out.set(c, off); off += c.length; } return out.buffer; }
+
+        // --- SHA-256 helper ---
+        async function sha256Hex(buffer){ const h = await crypto.subtle.digest('SHA-256', buffer); return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+
+        // --- CryptoJS helpers ---
         function arrayBufferToWordArray(ab){
             const u8 = new Uint8Array(ab);
             const len = u8.length;
             const words = [];
             for (let i = 0; i < len; i += 4) {
-                words.push(
-                    ((u8[i] << 24) | (u8[i+1] << 16) | (u8[i+2] << 8) | (u8[i+3]))
-                );
+                words.push(((u8[i] << 24) | (u8[i+1] << 16) | ((u8[i+2]||0) << 8) | (u8[i+3]||0)));
             }
             return CryptoJS.lib.WordArray.create(words, len);
         }
-
         function wordArrayToUint8Array(wordArray){
             const len = wordArray.sigBytes;
             const words = wordArray.words;
             const u8 = new Uint8Array(len);
-            let index=0;
+            let idx = 0;
             for(let i=0;i<words.length;i++){
                 let word = words[i];
-                u8[index++] = (word >> 24) & 0xFF; if(index>=len) break;
-                u8[index++] = (word >> 16) & 0xFF; if(index>=len) break;
-                u8[index++] = (word >> 8) & 0xFF; if(index>=len) break;
-                u8[index++] = word & 0xFF; if(index>=len) break;
+                u8[idx++] = (word >> 24) & 0xFF; if(idx>=len) break;
+                u8[idx++] = (word >> 16) & 0xFF; if(idx>=len) break;
+                u8[idx++] = (word >> 8) & 0xFF; if(idx>=len) break;
+                u8[idx++] = word & 0xFF; if(idx>=len) break;
             }
             return u8;
         }
 
-        async function encryptFiles(){
+        // --- Encryption with integrity + progress ---
+        async function encryptSelected(){
             const pwd = password.value || '';
             if(!pwd){ setStatus('Password required', {warn:true}); return }
-            if(droppedFiles.length===0){ setStatus('No files to encrypt', {warn:true}); return }
-            for(const item of droppedFiles){
+            if(files.length===0){ setStatus('No files selected', {warn:true}); return }
+            for(const item of files){
                 const f = item.file;
+                // create UI entry with progress
+                setStatus('Reading ' + item.path);
                 try{
-                    const ab = await f.arrayBuffer();
-                    const wordArr = arrayBufferToWordArray(ab);
-                    const cipher = CryptoJS.AES.encrypt(wordArr, pwd).toString();
-                    const payload = { filename: f.name, ciphertext: cipher };
+                    const buffer = await readFileChunks(f, p=>{
+                        // p between 0-1
+                        setStatus(`Reading ${item.path} — ${(p*100).toFixed(0)}%`);
+                    });
+                    setStatus('Hashing ' + item.path + ' (SHA-256)');
+                    const hash = await sha256Hex(buffer);
+                    setStatus('Encrypting ' + item.path);
+                    const word = arrayBufferToWordArray(buffer);
+                    const cipher = CryptoJS.AES.encrypt(word, pwd).toString();
+                    const payload = {
+                        filename: f.name,
+                        path: item.path,
+                        type: f.type || 'application/octet-stream',
+                        size: f.size,
+                        algorithm: 'AES-CryptoJS',
+                        ciphertext: cipher,
+                        sha256: hash,
+                        created_at: new Date().toISOString(),
+                        version: '1.0'
+                    };
                     const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
                     triggerDownload(blob, f.name + '.cypher.json');
-                    setStatus('Encrypted: ' + f.name, {success:true});
-                }catch(e){ setStatus('Failed: ' + f.name, {warn:true}) }
+                    setStatus(`Encrypted ${item.path} — integrity saved ✓`, {success:true});
+                }catch(e){ console.error(e); setStatus('Failed: ' + item.path, {warn:true}); }
             }
         }
 
-        async function decryptFiles(){
+        // --- Decrypt with integrity check and progress display ---
+        async function decryptSelected(){
             const pwd = password.value || '';
             if(!pwd){ setStatus('Password required', {warn:true}); return }
-            if(droppedFiles.length===0){ setStatus('No files to decrypt', {warn:true}); return }
-            for(const item of droppedFiles){
+            if(files.length===0){ setStatus('No files selected', {warn:true}); return }
+            for(const item of files){
                 const f = item.file;
+                setStatus('Reading ' + item.path);
                 try{
                     const txt = await f.text();
                     let parsed;
                     try{ parsed = JSON.parse(txt); }catch(e){ parsed = null }
-                    if(parsed && parsed.ciphertext && parsed.filename){
-                        const bytes = CryptoJS.AES.decrypt(parsed.ciphertext, pwd);
-                        const u8 = wordArrayToUint8Array(bytes);
-                        const blob = new Blob([u8], {type:'application/octet-stream'});
-                        triggerDownload(blob, parsed.filename);
-                        setStatus('Decrypted: ' + parsed.filename, {success:true});
-                    }else{
-                        setStatus('File format not recognized: ' + f.name, {warn:true});
-                    }
-                }catch(e){ setStatus('Failed: ' + f.name, {warn:true}) }
+                    if(!parsed || !parsed.ciphertext){ setStatus('Not a .cypher.json produced by this app: ' + item.path, {warn:true}); continue }
+                    setStatus('Decrypting ' + parsed.filename + '...');
+                    const bytes = CryptoJS.AES.decrypt(parsed.ciphertext, pwd);
+                    const u8 = wordArrayToUint8Array(bytes);
+                    setStatus('Computing integrity (SHA-256)');
+                    const gotHash = await sha256Hex(u8.buffer);
+                    const ok = parsed.sha256 && parsed.sha256 === gotHash;
+                    if(ok){ setStatus('File integrity verified ✓', {success:true}); }
+                    else { setStatus('File integrity FAILED ❌', {warn:true}); }
+                    const blob = new Blob([u8], {type: parsed.type || 'application/octet-stream'});
+                    triggerDownload(blob, parsed.filename);
+                }catch(e){ console.error(e); setStatus('Failed: ' + item.path, {warn:true}); }
             }
         }
 
-        function triggerDownload(blob, filename){
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-        }
-
-        encryptFilesBtn.addEventListener('click', encryptFiles);
-        decryptFilesBtn.addEventListener('click', decryptFiles);
-        clearFilesBtn.addEventListener('click', ()=>{ droppedFiles = []; renderFileList(); setStatus('Cleared file list') });
-
-        // Text encrypt/decrypt (preserve previous behaviour)
-        function encryptText(){
-            const pwd = password.value || '';
-            const txt = inputText.value || '';
-            if(!pwd){ setStatus('Password required', {warn:true}); return }
+        // --- Inspect encrypted file without decrypting ---
+        inspectInput.addEventListener('change', async ()=>{
+            const f = inspectInput.files[0]; if(!f) return;
             try{
-                const cipher = CryptoJS.AES.encrypt(txt, pwd).toString();
-                outputText.textContent = cipher;
-                setStatus('Encrypted', {success:true});
-                updateLength();
-            }catch(e){ setStatus('Encryption failed', {warn:true}) }
-        }
+                const txt = await f.text(); const parsed = JSON.parse(txt);
+                const info = [
+                    `Filename: ${parsed.filename || 'N/A'}`,
+                    `Path: ${parsed.path || 'N/A'}`,
+                    `Algorithm: ${parsed.algorithm || 'AES'}`,
+                    `Size: ${parsed.size || 'N/A'} bytes`,
+                    `Encrypted: ${parsed.created_at || 'N/A'}`,
+                    `Version: ${parsed.version || 'N/A'}`,
+                    `SHA-256: ${parsed.sha256 || 'N/A'}`
+                ].join('\n\n');
+                inspectPane.textContent = info;
+            }catch(e){ inspectPane.textContent = 'Could not parse .cypher.json'; }
+        });
 
-        function decryptText(){
-            const pwd = password.value || '';
-            const txt = inputText.value || '';
-            if(!pwd){ setStatus('Password required', {warn:true}); return }
-            try{
-                const bytes = CryptoJS.AES.decrypt(txt, pwd);
-                const dec = bytes.toString(CryptoJS.enc.Utf8);
-                if(!dec){ throw new Error('invalid') }
-                outputText.textContent = dec;
-                setStatus('Decrypted', {success:true});
-                updateLength();
-            }catch(e){ outputText.textContent = 'Invalid encrypted text or password!'; setStatus('Decryption failed', {warn:true}); updateLength() }
-        }
+        // --- Helpers ---
+        function triggerDownload(blob, filename){ const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+
+        encryptFilesBtn.addEventListener('click', encryptSelected);
+        decryptFilesBtn.addEventListener('click', decryptSelected);
+        clearFilesBtn.addEventListener('click', ()=>{ files = []; renderFiles(); setStatus('Cleared files'); });
+
+        // Text encrypt/decrypt (preserve behavior)
+        function encryptText(){ const pwd = password.value || ''; const txt = inputText.value || ''; if(!pwd){ setStatus('Password required', {warn:true}); return } try{ const cipher = CryptoJS.AES.encrypt(txt, pwd).toString(); outputText.textContent = cipher; setStatus('Encrypted', {success:true}); updateLength(); }catch(e){ setStatus('Encryption failed', {warn:true}); } }
+        function decryptText(){ const pwd = password.value || ''; const txt = inputText.value || ''; if(!pwd){ setStatus('Password required', {warn:true}); return } try{ const bytes = CryptoJS.AES.decrypt(txt, pwd); const dec = bytes.toString(CryptoJS.enc.Utf8); if(!dec){ throw new Error('invalid') } outputText.textContent = dec; setStatus('Decrypted', {success:true}); updateLength(); }catch(e){ outputText.textContent = 'Invalid encrypted text or password!'; setStatus('Decryption failed', {warn:true}); updateLength(); } }
 
         encryptBtn.addEventListener('click', encryptText);
         decryptBtn.addEventListener('click', decryptText);
 
-        copyBtn.addEventListener('click', async ()=>{
-            try{ await navigator.clipboard.writeText(outputText.textContent || ''); setStatus('Copied to clipboard', {success:true}) }catch(e){ setStatus('Copy failed', {warn:true}) }
-        });
+        copyBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(outputText.textContent || ''); setStatus('Copied to clipboard', {success:true}) }catch(e){ setStatus('Copy failed', {warn:true}) } });
+        clearBtn.addEventListener('click', ()=>{ outputText.textContent=''; inputText.value=''; password.value=''; updatePasswordUI(); setStatus('Cleared'); updateLength(); files = []; renderFiles(); });
 
-        clearBtn.addEventListener('click', ()=>{ outputText.textContent = ''; setStatus('Cleared'); updateLength(); });
-
-        downloadBtn.addEventListener('click', ()=>{
-            const data = outputText.textContent || '';
-            if(!data){ setStatus('Nothing to download', {warn:true}); return }
-            const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
-            triggerDownload(blob, 'cypher-result.txt');
-            setStatus('Downloaded', {success:true});
-        });
-
+        downloadBtn.addEventListener('click', ()=>{ const data = outputText.textContent || ''; if(!data){ setStatus('Nothing to download', {warn:true}); return } const blob = new Blob([data], {type:'text/plain;charset=utf-8'}); triggerDownload(blob, 'cypher-result.txt'); setStatus('Downloaded', {success:true}); });
         swapBtn.addEventListener('click', ()=>{ const tmp = inputText.value; inputText.value = outputText.textContent || ''; outputText.textContent = tmp || ''; setStatus('Swapped input/output'); updateLength(); });
 
-        // Keyboard shortcuts
         inputText.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === 'Enter'){ encryptText(); } if(e.shiftKey && e.key === 'Enter'){ decryptText(); } });
 
+        // --- Inspect helper ---
+        function inspectFile(item){
+            const reader = new FileReader();
+            reader.onload = ()=>{
+                try{ const parsed = JSON.parse(reader.result); const info = [
+                    `Filename: ${parsed.filename || 'N/A'}`,
+                    `Path: ${parsed.path || 'N/A'}`,
+                    `Algorithm: ${parsed.algorithm || 'AES'}`,
+                    `Size: ${parsed.size || 'N/A'} bytes`,
+                    `Encrypted: ${parsed.created_at || 'N/A'}`,
+                    `Version: ${parsed.version || 'N/A'}`,
+                    `SHA-256: ${parsed.sha256 || 'N/A'}`
+                ].join('\n\n');
+                setStatus('Inspected ' + item.path);
+                outputText.textContent = info;
+                }catch(e){ setStatus('Cannot inspect: not a cypher JSON', {warn:true}); }
+            };
+            reader.readAsText(item.file);
+        }
+
+        // --- Directory drop fallback: use webkit entries ---
+        // Already handled in drop event readDirectoryEntry
+
         // initialize
-        renderFileList(); updateLength(); setStatus('Ready');
+        renderFiles(); updateLength(); setStatus('Ready'); updatePasswordUI();
     </script>
 </body>
 </html>
